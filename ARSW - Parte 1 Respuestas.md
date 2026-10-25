@@ -1,10 +1,9 @@
 # ARSW Lab Escalamiento Azure: Parte 1, respuestas a las preguntas
 
-Escalabilidad vertical con una máquina virtual en Azure · Fecha de las pruebas: 25/10/2026
+Escalabilidad vertical con una máquina virtual en Azure ·
 
 **Nota sobre el entorno:** por la política de regiones de la suscripción Azure for Students no fue posible usar `B1ls` ni `B2ms`. La VM se creó en **Chile Central** con `B2ats_v2` (2 vCPU, 1 GiB RAM) y se escaló a `B4als_v2` (4 vCPU, 8 GiB RAM). El objetivo del experimento es el mismo: comparar una VM pequeña con una de mayor capacidad. Cada prueba de carga se corrió una sola vez, por lo que los resultados son indicativos.
 
-> Las líneas **\[Insertar captura: ...\]** marcan dónde va cada imagen. Las capturas marcadas como *pendiente* hay que tomarlas todavía.
 
 ## Paso 12: evaluación del escenario de calidad
 
@@ -31,11 +30,10 @@ Al crear la VM por el portal, Azure genera en el grupo `SCALABILITY_LAB`:
 5. El grupo de seguridad de red (`VERTICAL-SCALABILITY-nsg`)
 6. La red virtual (`vnet-chilecentral-...`), con su subred
 
-Son 6 recursos. **Confirmen el número exacto contra el listado real del grupo de recursos**, porque Azure puede agregar alguno más según la configuración.
+Son 6 recursos. 
 
-**\[Insertar captura: pantalla de implementación con NSG, IP pública y red virtual (la que muestra "La implementación está en curso")\]**
+<img width="948" height="916" alt="Captura de pantalla 2026-10-25 165805" src="https://github.com/user-attachments/assets/fde2c594-1bc7-41c5-9494-cd4aa7d38925" />
 
-**\[Insertar captura (pendiente): listado de recursos dentro del grupo `SCALABILITY_LAB` en el portal\]**
 
 ### 2. ¿Para qué sirve cada recurso?
 
@@ -54,7 +52,8 @@ Son 6 recursos. **Confirmen el número exacto contra el listado real del grupo d
 
 **Regla de entrada:** el NSG bloquea por defecto el tráfico entrante que no esté permitido explícitamente. Al crear la VM solo quedó abierto el puerto 22 (SSH). La aplicación escucha en el 3000, así que sin una regla que permita ese puerto, las peticiones desde Internet nunca llegan.
 
-**\[Insertar captura: navegador mostrando `57.156.62.102:3000/fibonacci/6` con la respuesta "The answer is 8"\]**
+<img width="500" height="165" alt="Captura de pantalla 2026-10-25 171636" src="https://github.com/user-attachments/assets/c6d47508-a4a2-4f43-b7c0-7f160bf619dc" />
+
 
 ### 4. Tabla de tiempos e interpretación
 
@@ -75,15 +74,16 @@ Medidos en la consola del navegador (pestaña Network, columna Time), con caché
 
 **Interpretación:** el tiempo crece con N. Entre 1.000.000 y 1.090.000 (+9 % en N) el tiempo pasó de 6.55 s a 7.62 s (+16 %). Es coherente con un algoritmo iterativo que, en cada paso, suma números cada vez más grandes (el resultado tiene cientos de miles de dígitos), de modo que cada iteración cuesta más que la anterior. Además Node.js ejecuta el cálculo en un solo hilo y bloquea el *event loop* mientras dura. **Verifiquen esto leyendo `FibonacciApp.js`** y confirmen si usa `BigInt` o una librería de enteros grandes, porque aquí es una inferencia a partir de las mediciones. Parte del tiempo también es la descarga de \~209 kB de respuesta.
 
-**\[Insertar captura: consola Network con la fila `1000000` y el tiempo de 5.94 s (primera medición, con status 304)\]**
+<img width="954" height="1001" alt="Captura de pantalla 2026-10-25 172115" src="https://github.com/user-attachments/assets/c399e88c-e691-49c6-b4ab-ddd411485fba" />
 
-Se recomienda reemplazarla por una captura con *Disable cache* activado y status 200, o dejar esta anotando que el servidor igual recalculó.
 
 ### 5. Imagen del consumo de CPU e interpretación
 
-**\[Insertar captura: gráfica "Avg Percentage CPU", picos de \~13 %, \~10 % y \~23 % entre las 5:05 y las 5:30\]**
+<img width="1568" height="655" alt="Captura de pantalla 2026-10-25 173201" src="https://github.com/user-attachments/assets/4c403140-636a-4a55-994d-f9f412e6b4e6" />
 
-**\[Insertar captura: gráfica "Max Percentage CPU", pico máximo de 23.46 %\]**
+
+<img width="1587" height="649" alt="Captura de pantalla 2026-10-25 173320" src="https://github.com/user-attachments/assets/f052d3b0-307e-41cd-a2d9-a74e9d6e66de" />
+
 
 **Interpretación:** los picos corresponden a las tandas de peticiones secuenciales. Entre una y otra la CPU vuelve a casi 0 %. El máximo fue 23.46 % porque Azure agrega la métrica por intervalo (aprox. un minuto) y cada cálculo dura 6 a 7 s, así que se diluye. Mientras corre un cálculo, un núcleo está al 100 %: la función es puro cómputo (CPU-bound), no espera disco ni red. Con 2 vCPU, un solo hilo equivale como máximo a \~50 % de la CPU total, y es lo que se observó después con carga concurrente.
 
@@ -100,13 +100,17 @@ Dos ejecuciones en paralelo, 10 iteraciones cada una, iniciadas a las 5:46 p. m.
 | Máximo | 17.7 s | 12.3 s |
 | Desviación estándar | 3.8 s | 2.7 s |
 
-**\[Insertar captura: resumen Newman A (2 fallos, `ECONNRESET` en iteraciones 3 y 7)\]**
+<img width="904" height="723" alt="Captura de pantalla 2026-10-25 174745" src="https://github.com/user-attachments/assets/f2ea597e-7059-4e65-a96d-28ad860d5704" />
 
-**\[Insertar captura: resumen Newman B (3 fallos, `ECONNRESET`)\]**
 
-**\[Insertar captura: gráfica Max Percentage CPU con el pico de 49.22 % a las 5:47 p. m.\]**
+<img width="906" height="717" alt="Captura de pantalla 2026-10-25 174757" src="https://github.com/user-attachments/assets/61eb327d-fe8f-4bb4-b6c9-886b9656fd20" />
 
-**\[Insertar captura: `forever list` con uptime 0:0:38:42\]**
+
+<img width="1545" height="654" alt="Captura de pantalla 2026-10-25 174907" src="https://github.com/user-attachments/assets/0e66fa1b-c0e8-4f0f-90df-14a0b9d9907c" />
+
+
+<img width="954" height="384" alt="Captura de pantalla 2026-10-25 175202" src="https://github.com/user-attachments/assets/238d45da-cc23-4d27-88ae-42daa8be21d4" />
+
 
 **Tiempos:** el mínimo (6.3 s) coincide con el de una petición aislada. El promedio sube a \~9.8 s y el máximo a 17.7 s porque, al ser un solo hilo, cuando dos peticiones coinciden una espera a que termine la otra.
 
@@ -114,11 +118,12 @@ Dos ejecuciones en paralelo, 10 iteraciones cada una, iniciadas a las 5:46 p. m.
 
 ### 7. Diferencia entre `B2ms` y `B1ls`
 
-En infraestructura: `B1ls` tiene 1 vCPU y 0.5 GiB de RAM; `B2ms` tiene 2 vCPU y 8 GiB. Pero la diferencia importante está en el modelo de la **serie B (burstable)**: estas VMs no dan el 100 % de la CPU de forma sostenida. Tienen un rendimiento base (una fracción de la CPU) y acumulan **créditos** cuando están por debajo de esa base, que luego gastan para "explotar" hasta el 100 %. Cuando los créditos se agotan, la VM queda limitada al rendimiento base. `B1ls` tiene un rendimiento base mucho menor que `B2ms`, así que se queda sin créditos mucho antes bajo carga continua. **Confirmen los porcentajes base y los créditos máximos en la documentación oficial de Azure sobre la serie B** y cítenlos aquí.
+En infraestructura: `B1ls` tiene 1 vCPU y 0.5 GiB de RAM; `B2ms` tiene 2 vCPU y 8 GiB. Pero la diferencia importante está en el modelo de la **serie B (burstable)**: estas VMs no dan el 100 % de la CPU de forma sostenida. Tienen un rendimiento base (una fracción de la CPU) y acumulan **créditos** cuando están por debajo de esa base, que luego gastan para "explotar" hasta el 100 %. Cuando los créditos se agotan, la VM queda limitada al rendimiento base. `B1ls` tiene un rendimiento base mucho menor que `B2ms`, así que se queda sin créditos mucho antes bajo carga continua.  y cítenlos aquí.
 
 Aclaración: por la restricción de la suscripción, en la práctica se comparó `B2ats_v2` con `B4als_v2`, que también son *burstable* (Serie B v2). Para una carga sostenida de CPU como esta, ese modelo es relevante: una VM burstable no es la más adecuada para cómputo continuo.
 
-**\[Insertar captura: lista de tamaños B4 disponibles con `B4als_v2`, `B4ls_v2`, `B4as_v2` y `B4s_v2`\]**
+<img width="1643" height="481" alt="Captura de pantalla 2026-10-25 175845" src="https://github.com/user-attachments/assets/bc357dfd-8e43-4ed4-addc-fe7d9f8f1bfd" />
+
 
 ### 8. ¿Aumentar el tamaño de la VM es una buena solución? ¿Qué pasa con la FibonacciApp al cambiar el tamaño?
 
@@ -126,7 +131,8 @@ Aclaración: por la restricción de la suscripción, en la práctica se comparó
 
 **Qué pasa con la app:** al cambiar el tamaño la VM se reinicia y la aplicación **no volvió a arrancar sola** (`forever list` indicó *No forever processes running*). Hubo que entrar por SSH y ejecutar `forever start FibonacciApp.js` otra vez. Mientras tanto el servicio estuvo caído.
 
-**\[Insertar captura: `forever list` tras el resize con "No forever processes running"\]**
+<img width="957" height="255" alt="Captura de pantalla 2026-10-25 180341" src="https://github.com/user-attachments/assets/1a8766a2-ff36-430d-93a1-faa1204ee284" />
+
 
 ### 9. ¿Qué pasa con la infraestructura al cambiar el tamaño? ¿Efectos negativos?
 
@@ -150,11 +156,14 @@ Aclaración: por la restricción de la suscripción, en la práctica se comparó
 
 La CPU bajó de \~49 % a \~25 % porque el mismo hilo ocupa 1 de 4 núcleos en lugar de 1 de 2; el trabajo no se redujo. El tiempo promedio por petición bajo concurrencia incluso subió ligeramente (aprox. 6 s de cálculo × 2 clientes en cola). Lo que sí cambió en esta corrida fue que no hubo fallos. No se verificó la causa; puede deberse a la mayor RAM, al cambio de host tras el reinicio o a variabilidad, así que conviene repetir la prueba antes de afirmar una explicación.
 
-**\[Insertar captura: resumen de Newman 1 con `B4als_v2` (0 fallos, promedio 10.9 s)\]**
+<img width="909" height="672" alt="Captura de pantalla 2026-10-25 181453" src="https://github.com/user-attachments/assets/f1d1b3a6-3f30-48d1-a9cf-be177f48a54d" />
 
-**\[Insertar captura: resumen de Newman 2 con `B4als_v2` (0 fallos, promedio 10.4 s)\]**
 
-**\[Insertar captura: gráfica Max Percentage CPU con el pico de 24.89 % a las 6:14 p. m.\]**
+<img width="902" height="709" alt="Captura de pantalla 2026-10-25 181501" src="https://github.com/user-attachments/assets/adb458d7-68fc-46ac-bb06-45efb784e213" />
+
+
+<img width="1577" height="672" alt="Captura de pantalla 2026-10-25 181553" src="https://github.com/user-attachments/assets/ee643df2-ecea-42c2-8665-68c7c52ce125" />
+
 
 ### 11. Con 4 ejecuciones paralelas de Newman, ¿el comportamiento es porcentualmente mejor?
 
@@ -176,15 +185,20 @@ Prueba con `B4als_v2`, iniciada a las 6:17 p. m.:
 
 **Respuesta:** depende de contra qué se compare. Frente a la VM pequeña con 2 Newman, el porcentaje de fallos con 4 Newman en la VM grande es menor (12.5 % frente a 25 %), aunque con el doble de carga. Pero frente a la misma VM grande con 2 Newman, el comportamiento es **peor**: aparecen fallos (0 % → 12.5 %), el tiempo promedio casi se duplica (\~10.6 s → \~18.5 s) y el máximo llega a 38.5 s. La CPU se queda en \~25 %, lo que confirma que solo un núcleo trabaja. Al ser corridas únicas, no se puede decir que la VM grande sea "mejor" de forma concluyente; solo que tolera algo más de carga sin resolver el cuello de botella del hilo único.
 
-**\[Insertar captura: resumen de Newman A, 1 fallo, promedio 16.1 s\]**
+<img width="904" height="660" alt="Captura de pantalla 2026-10-25 182101" src="https://github.com/user-attachments/assets/00c78e11-7fce-415a-a1de-7f439caf1e2a" />
 
-**\[Insertar captura: resumen de Newman B, 2 fallos, promedio 19.3 s\]**
 
-**\[Insertar captura: resumen de Newman C, 0 fallos, promedio 16.7 s\]**
+<img width="887" height="709" alt="Captura de pantalla 2026-10-25 182112" src="https://github.com/user-attachments/assets/28c60c74-a5e9-40fd-bdf6-4446e5148dce" />
 
-**\[Insertar captura: resumen de Newman D, 2 fallos, promedio 22 s\]**
 
-**\[Insertar captura: gráfica Max Percentage CPU con el pico de 25.16 % a las 6:19 p. m.\]**
+<img width="904" height="688" alt="Captura de pantalla 2026-10-25 182122" src="https://github.com/user-attachments/assets/d126871b-f796-4e12-8496-781e177b49aa" />
+
+
+<img width="899" height="690" alt="Captura de pantalla 2026-10-25 182131" src="https://github.com/user-attachments/assets/b5d6c794-84a4-46c1-91aa-313ae3c7203f" />
+
+
+<img width="1576" height="661" alt="Captura de pantalla 2026-10-25 182204" src="https://github.com/user-attachments/assets/1a501a7c-587c-4b73-b05f-77613b82f1b9" />
+
 
 ## Conclusión general
 
